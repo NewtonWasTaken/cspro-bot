@@ -3,6 +3,8 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 import asyncio
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix="/", intents=intents)
@@ -10,6 +12,13 @@ client = commands.Bot(command_prefix="/", intents=intents)
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
+
+MONGO_URL = os.getenv("MONGO_URL")
+# Create a new client and connect to the server
+mongo_client = MongoClient(MONGO_URL, server_api=ServerApi('1'))
+
+welcome = mongo_client["cspro-bot"]["welcome"]
+reaction_db = mongo_client["cspro-bot"]["reaction"]
 
 @client.event
 async def on_ready():
@@ -49,8 +58,18 @@ async def on_app_command_error(interaction: discord.Interaction, error: discord.
 
 @client.event
 async def on_member_join(member):
-    await member.send("Vítej na serveru CSPRO!")
-        
+    msg = welcome.find_one({"guild_id": member.guild.id})
+    if msg is not None:
+        await member.send(msg["msg"])
+    
+
+@client.event
+async def on_raw_reaction_add(reaction):
+    message = reaction_db.find_one({"channel_id": reaction.channel_id, "message_id": reaction.message_id, "emoji": reaction.emoji})
+    if message is not None:
+        user = reaction.member
+        await user.send(message["message"])
+
 # Loading cogs
 async def load_extensions():
     for filename in os.listdir('./cogs'):
