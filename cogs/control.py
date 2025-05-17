@@ -5,7 +5,7 @@ from ui import GuildSelectView
 class Control(commands.Cog):
     def __init__(self, client: commands.Bot):
         self.client = client
-
+        
     @commands.Cog.listener()
     async def on_ready(self):
         print("Loaded cog: Control")
@@ -38,7 +38,20 @@ class Control(commands.Cog):
             except Exception:
                 failed += 1
 
-        await interaction.followup.send(f"✅ Odesláno {count} uživatelům\n❌ Chyba nastala u {failed} uživatelů", ephemeral=True)
+        await interaction.followup.send(f"✅ Odesláno {count} uživatelům\n❌ Chyba nastala u {failed} uživatelů")
+
+    
+    setup = discord.app_commands.Group(name="setup", description="⛔ Nastavuje reakce na zprávy a uvítací zprávu")
+
+    @setup.command(name="welcome", description="⛔ Nastavuje uvítací zprávu pro členy daného serveru")
+    @discord.app_commands.checks.has_permissions(administrator=True)
+    async def welcome(self, interaction: discord.Interaction, message: str):
+        view = GuildSelectView(self.client.guilds, self.client)
+        await interaction.response.send_message("Vyberte server pro který chcete welcome zprávu změnit:", view=view, ephemeral=True)
+        await view.wait()  # Waits for choice
+        guild = view.selected_guild
+
+        await interaction.followup.send(f"Zpráva pro server ID {guild.id} bude nastavena na {message}")
 
 async def setup(client: commands.Bot):
     await client.add_cog(Control(client))

@@ -15,7 +15,8 @@ TOKEN = os.getenv("TOKEN")
 async def on_ready():
     print(f"Logged in as {client.user}")
     GUILD_IDS = [guild.id for guild in client.guilds]
-    print(GUILD_IDS)
+
+
     # Copy global commands to guilds
     for guild_id in GUILD_IDS:
         guild = discord.Object(id=guild_id)
@@ -25,8 +26,7 @@ async def on_ready():
             print(f"Slash commands synced for guild ID {guild_id}")
         except Exception as e:
             print(f"Error while syncing guild ID {guild_id}: {e}")
-    client.tree.clear_commands(guild=None)
-    await client.tree.sync()
+
 
 
 @client.tree.error
