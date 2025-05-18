@@ -1,13 +1,11 @@
 from discord.ext import commands
 import discord
 from ui import GuildSelectView
-from dotenv import load_dotenv
 import os
 from pymongo import MongoClient, ReturnDocument
 from pymongo.server_api import ServerApi
 
 
-load_dotenv()
 MONGO_URL = os.getenv("MONGO_URL")
 # Create a new client and connect to the server
 mongo_client = MongoClient(MONGO_URL, server_api=ServerApi('1'))
@@ -25,7 +23,7 @@ class Control(commands.Cog):
 
     @discord.app_commands.command(name="help", description="Vypíše jak používat tohoto bota.")
     async def help(self, interaction: discord.Interaction):
-        await interaction.response.send_message("\n**Tento Discord bot byl vytvořen pro účely CSPRO akademie. Využívá slash commands.**\n\n ℹ️ **INFORMACE** \n `about` - Informace o botovi\n\n 💬 **ZPRÁVY** \n `⛔send` - Pošle všem uživatelům zadaného serveru zprávu\n `⛔ welcome <add|edit|remove>` - Nastavuje uvítací zprávu daného serveru\n `⛔ reaction <add|list|remove>` - Nastavuje reakce na danou zprávu. Při reakci na zprávu se uživateli zašle předem nastavená zpráva  \n\n ⛔ - pouze pro Administrátory", ephemeral=True)
+        await interaction.response.send_message("\n**Tento Discord bot byl vytvořen pro účely CSPRO akademie. Využívá slash commands.**\n\n ℹ️ **INFORMACE** \n `about` - Informace o botovi\n\n 💬 **ZPRÁVY** \n `⛔ send` - Pošle všem uživatelům zadaného serveru zprávu\n `⛔ welcome <add|edit|remove>` - Nastavuje uvítací zprávu daného serveru\n `⛔ reaction <add|list|remove>` - Nastavuje reakce na danou zprávu. Při reakci na zprávu se uživateli zašle předem nastavená DM \n\n ⛔ - pouze pro Administrátory", ephemeral=True)
 
     @discord.app_commands.command(name="about", description="Informace o botovi")
     async def about(self, interaction: discord.Interaction):
@@ -63,6 +61,7 @@ class Control(commands.Cog):
         await interaction.response.send_message("Vyberte server pro který chcete welcome zprávu přidat:", view=view, ephemeral=True)
         await view.wait()  # Waits for choice
         guild = view.selected_guild
+
         if welcome.find_one({"guild_id": guild.id}) is not None:
             await interaction.followup.send(f"❌ Zpráva pro server ID `{guild.id}` už existuje: \n `{welcome.find_one({"guild_id": guild.id})["msg"]}`")
         else:
@@ -91,15 +90,15 @@ class Control(commands.Cog):
         await interaction.response.send_message("Vyberte server pro který chcete welcome zprávu smazat:", view=view, ephemeral=True)
         await view.wait()  # Waits for choice
         guild = view.selected_guild
-
         past_msg = welcome.find_one({"guild_id": guild.id})
+
         if past_msg is None:
             await interaction.followup.send(f"❌ Zpráva pro server ID `{guild.id}` neexistuje")
         else:
             welcome.delete_one({"guild_id": guild.id})
             await interaction.followup.send(f"✅ Zpráva `{past_msg["msg"]}` pro server ID `{guild.id}` byla smazána.")
         
-    reaction = discord.app_commands.Group(name="reaction", description="⛔ Nastavuje reakce na danou zprávu. Při reakci na zprávu se uživateli zašle předem nastavená zpráva")
+    reaction = discord.app_commands.Group(name="reaction", description="⛔ Nastavuje reakce na danou zprávu. Při reakci na zprávu se uživateli zašle předem nastavená DM")
 
     @reaction.command(name="add", description="⛔ Přidává reakci na danou zprávu a nastavuje zprávu co se bude posílat.")
     @discord.app_commands.checks.has_permissions(administrator=True)
@@ -134,6 +133,7 @@ class Control(commands.Cog):
     async def reaction_list(self, interaction: discord.Interaction):
         reactions = list(reaction_db.find({"_id":{"$ne": "id_counter"}}))
         final_message = ""
+
         if reactions == []:
             await interaction.response.send_message("❌ Bot nemá nastavené žádné reakce.", ephemeral=True)
         else:

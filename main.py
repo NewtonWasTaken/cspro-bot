@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 import os
-from dotenv import load_dotenv
 import asyncio
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -9,7 +8,6 @@ from pymongo.server_api import ServerApi
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix="/", intents=intents)
 
-load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
 
