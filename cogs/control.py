@@ -3,7 +3,7 @@ import discord
 from ui import GuildSelectView
 from dotenv import load_dotenv
 import os
-from pymongo.mongo_client import MongoClient
+from pymongo import MongoClient, ReturnDocument
 from pymongo.server_api import ServerApi
 
 
@@ -25,7 +25,7 @@ class Control(commands.Cog):
 
     @discord.app_commands.command(name="help", description="Vypíše jak používat tohoto bota.")
     async def help(self, interaction: discord.Interaction):
-        await interaction.response.send_message("\n**Tento Discord bot byl vytvořen pro účely CSPRO akademie. Využívá slash commands.**\n\n ℹ️ **INFORMACE** \n `about` - Informace o botovi\n\n 💬 **ZPRÁVY** \n `⛔send` - Pošle všem uživatelům zadaného serveru zprávu \n\n ⛔ - pouze pro Administrátory", ephemeral=True)
+        await interaction.response.send_message("\n**Tento Discord bot byl vytvořen pro účely CSPRO akademie. Využívá slash commands.**\n\n ℹ️ **INFORMACE** \n `about` - Informace o botovi\n\n 💬 **ZPRÁVY** \n `⛔send` - Pošle všem uživatelům zadaného serveru zprávu\n `⛔ welcome <add|edit|remove>` - Nastavuje uvítací zprávu daného serveru\n `⛔ reaction <add|list|remove>` - Nastavuje reakce na danou zprávu. Při reakci na zprávu se uživateli zašle předem nastavená zpráva  \n\n ⛔ - pouze pro Administrátory", ephemeral=True)
 
     @discord.app_commands.command(name="about", description="Informace o botovi")
     async def about(self, interaction: discord.Interaction):
@@ -99,26 +99,67 @@ class Control(commands.Cog):
             welcome.delete_one({"guild_id": guild.id})
             await interaction.followup.send(f"✅ Zpráva `{past_msg["msg"]}` pro server ID `{guild.id}` byla smazána.")
         
-    reaction = discord.app_commands.Group(name="reaction", description="⛔ Nastavuje reakce na danou zprávu")
+    reaction = discord.app_commands.Group(name="reaction", description="⛔ Nastavuje reakce na danou zprávu. Při reakci na zprávu se uživateli zašle předem nastavená zpráva")
 
-    @reaction.command(name="add", description="⛔ Přidává reakci na danou zprávu. Při reakci na zprávu se uživateli zašle DM se zadanou zprávou.")
+    @reaction.command(name="add", description="⛔ Přidává reakci na danou zprávu a nastavuje zprávu co se bude posílat.")
     @discord.app_commands.checks.has_permissions(administrator=True)
     async def reaction_add(self, interaction: discord.Interaction, channel_id: str, message_id: str, emoji: str, message: str):
         channel_id = int(channel_id)
         message_id = int(message_id)
         channel = self.client.get_channel(channel_id)
 
+        duplicate = reaction_db.find_one({"channel_id": channel_id, "message_id": message_id, "emoji": emoji})
+
         if channel is None:
             await interaction.response.send_message("❌ Kanál nenalezen", ephemeral=True)
+        elif duplicate is not None:
+            await interaction.response.send_message("❌ Tato interakce již existuje", ephemeral=True)
         else:
             try:
-            
                 reaction_message = await channel.fetch_message(message_id)
-                print(emoji)
                 await reaction_message.add_reaction(emoji)
-                reaction_db.insert_one({"channel_id": channel_id, "message_id": message_id, "emoji": emoji, "message": message})
-                await interaction.response.send_message(f"✅ Reakce přidána\nChannel ID: `{channel_id}`\nMessage ID `{message_id}`\nEmoji: `{emoji}`\nMessage: `{message}`")
+
+                id = reaction_db.find_one_and_update({"_id": "id_counter"},{"$inc": {"seq": 1}},upsert=True,return_document=ReturnDocument.AFTER)
+                reaction_db.insert_one({"id": id["seq"], "channel_id": channel_id, "message_id": message_id, "emoji": emoji, "message": message})
+                
+                await interaction.response.send_message(f"✅ Reakce přidána\nReakce ID: `{id["seq"]}`\nChannel ID: `{channel_id}`\nMessage ID `{message_id}`\nEmoji: `{emoji}`\nMessage: `{message}`")
+            
             except Exception:
                 await interaction.response.send_message("❌ Nastala chyba", ephemeral=True)
+
+
+
+    @reaction.command(name="list", description="⛔ Vypisuje všechny zprávy na které existuje reakce se zprávou.")
+    @discord.app_commands.checks.has_permissions(administrator=True)
+    async def reaction_list(self, interaction: discord.Interaction):
+        reactions = list(reaction_db.find({"_id":{"$ne": "id_counter"}}))
+        final_message = ""
+        if reactions == []:
+            await interaction.response.send_message("❌ Bot nemá nastavené žádné reakce.", ephemeral=True)
+        else:
+            for i in range(len(reactions)):
+                if i != 0:
+                    final_message += "\n"
+                final_message += f"**Reakce ID {reactions[i]["id"]}**\nChannel ID: `{reactions[i]["channel_id"]}`\nMessage ID `{reactions[i]["message_id"]}`\nEmoji: `{reactions[i]["emoji"]}`\nMessage: `{reactions[i]["message"]}`\n\n"
+            await interaction.response.send_message(final_message)
+
+
+    @reaction.command(name="remove", description="⛔ Odstraní reakci na danou zprávu.")
+    @discord.app_commands.checks.has_permissions(administrator=True)
+    async def reaction_remove(self, interaction: discord.Interaction, reaction_id: str):
+        reaction = reaction_db.find_one({"id":int(reaction_id)})
+
+        if reaction is None:
+            await interaction.response.send_message("❌ Tato reakce neexistuje", ephemeral=True)
+        else:
+            reaction_db.delete_one({"id":int(reaction_id)})
+
+            channel = self.client.get_channel(reaction["channel_id"])
+            reaction_message = await channel.fetch_message(reaction["message_id"])
+            await reaction_message.clear_reaction(reaction["emoji"])
+
+            await interaction.response.send_message(f"✅ Reakce ID {reaction["id"]} úspěšně smazána")
+        
+
 async def setup(client: commands.Bot):
     await client.add_cog(Control(client))

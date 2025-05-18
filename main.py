@@ -65,7 +65,11 @@ async def on_member_join(member):
 
 @client.event
 async def on_raw_reaction_add(reaction):
-    message = reaction_db.find_one({"channel_id": reaction.channel_id, "message_id": reaction.message_id, "emoji": reaction.emoji})
+    if reaction.emoji.is_custom_emoji():
+        emoji = f"<:{reaction.emoji.name}:{reaction.emoji.id}>"
+    else:
+        emoji = reaction.emoji.name
+    message = reaction_db.find_one({"channel_id": reaction.channel_id, "message_id": reaction.message_id, "emoji": emoji})
     if message is not None:
         user = reaction.member
         await user.send(message["message"])
