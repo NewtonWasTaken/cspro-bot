@@ -4,8 +4,10 @@ from ui import GuildSelectView
 import os
 from pymongo import MongoClient, ReturnDocument
 from pymongo.server_api import ServerApi
+from dotenv import load_dotenv
 
 
+load_dotenv()
 MONGO_URL = os.getenv("MONGO_URL")
 # Create a new client and connect to the server
 mongo_client = MongoClient(MONGO_URL, server_api=ServerApi('1'))
