@@ -25,11 +25,11 @@ class Control(commands.Cog):
 
     @discord.app_commands.command(name="help", description="Vypíše jak používat tohoto bota.")
     async def help(self, interaction: discord.Interaction):
-        await interaction.response.send_message("\n**Tento Discord bot byl vytvořen pro účely CSPRO akademie. Využívá slash commands.**\n\n ℹ️ **INFORMACE** \n `about` - Informace o botovi\n\n 💬 **ZPRÁVY** \n `⛔ send` - Pošle všem uživatelům zadaného serveru zprávu\n `⛔ welcome <add|edit|remove>` - Nastavuje uvítací zprávu daného serveru\n `⛔ reaction <add|list|remove>` - Nastavuje reakce na danou zprávu. Při reakci na zprávu se uživateli zašle předem nastavená DM \n\n ⛔ - pouze pro Administrátory", ephemeral=True)
+        await interaction.response.send_message("\n**Tento Discord bot byl vytvořen pro účely Stratyho Discord serveru. Využívá slash commands.**\n\n ℹ️ **INFORMACE** \n `about` - Informace o botovi\n\n 💬 **ZPRÁVY** \n `⛔ send` - Pošle všem uživatelům zadaného serveru zprávu\n `⛔ welcome <add|edit|remove>` - Nastavuje uvítací zprávu daného serveru\n `⛔ reaction <add|list|remove>` - Nastavuje reakce na danou zprávu. Při reakci na zprávu se uživateli zašle předem nastavená DM \n\n ⛔ - pouze pro Administrátory", ephemeral=True)
 
     @discord.app_commands.command(name="about", description="Informace o botovi")
     async def about(self, interaction: discord.Interaction):
-        await interaction.response.send_message("Vytvořeno pro účely CSPRO akademie. \n\n Autor: @newton55", ephemeral=True)
+        await interaction.response.send_message("Vytvořeno pro účely Stratyho Discord serveru. \n\n Autor: @newton55", ephemeral=True)
 
     @discord.app_commands.command(name="send", description="⛔ Pošle všem uživatelům zadaného serveru zprávu")
     @discord.app_commands.checks.has_permissions(administrator=True)
